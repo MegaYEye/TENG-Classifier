@@ -5,10 +5,21 @@ from glob import glob
 import os
 from scipy import signal
 
-from scipy.fft import fft, fftfreq
-from pyts.classification import BOSSVS
-from pyts.classification import SAXVSM
 # from pyts.classification import LearningShapelets
+
+from sktime.classification.interval_based import TimeSeriesForestClassifier
+# from sktime.datasets import load_arrow_head,load_japanese_vowels
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sktime.utils.data_processing import from_2d_array_to_nested, from_3d_numpy_to_nested
+from sktime.classification.compose import ColumnEnsembleClassifier
+from sktime.classification.dictionary_based import BOSSEnsemble
+from sktime.classification.interval_based import TimeSeriesForestClassifier
+from sktime.classification.shapelet_based import MrSEQLClassifier
+from sklearn.pipeline import Pipeline
+
+# from sktime.datasets import load_basic_motions
+from sktime.transformations.panel.compose import ColumnConcatenator
 
 
 def show_fft(y):
@@ -88,9 +99,9 @@ def generate_data(folder):
         X2 = X2 - np.mean(X2)
         X1abs = abs(X1)
         X2abs = abs(X2)
-        plt.plot(np.arange(len(X1)),X1)
-        plt.plot(np.arange(len(X2)),X2)
-        plt.show()
+        # plt.plot(np.arange(len(X1)),X1)
+        # plt.plot(np.arange(len(X2)),X2)
+        # plt.show()
 
         i = 100
         while i < len(X1):
@@ -110,72 +121,54 @@ def generate_data(folder):
                 i += 1
     return np.array(bufs_np), np.array(ys)
 
-        # plt.plot(np.arange(len(X_fil)), X_fil)
-        # plt.show()
+    # plt.plot(np.arange(len(X_fil)), X_fil)
+    # plt.show()
 
 
-def classification_BOSSVS(train_X, train_y, test_X, test_y):
-    # clf = LearningShapelets(random_state=42, tol=0.01)
-    X_train = train_X[:, 1, :] - train_X[:, 0, :]
-    X_test = test_X[:, 1, :] - test_X[:, 0, :]
-    y_train = train_y
-    y_test = test_y
-    # clf.fit(train_X, train_y)
-    # print(clf.test(test_X))
-    # print(test_y)
-    bossvs = BOSSVS(word_size=2, n_bins=3, window_size=10)
-    bossvs.fit(X_train, y_train)
-    # tfidf = bossvs.tfidf_
-    # vocabulary_length = len(bossvs.vocabulary_)
-    # X_new = bossvs.decision_function(X_test)
-    # print(X_new)
-
-    # clf = LearningShapelets(random_state=42, tol=0.01)
-    # clf.fit(X_train, y_train)
-    # print(clf.score(X_test,y_test))
-    # print(clf.score(X_train,y_train))
-    print("train accuracy:",bossvs.score(X_train,y_train))
-    print("test accuracy:",bossvs.score(X_test,y_test))
-    print("predict y:",bossvs.predict(X_test))
-    print("true y:",y_test)
-    
-    
-# def classification_SAXVSM(train_X, train_y, test_X, test_y):
-#     # clf = LearningShapelets(random_state=42, tol=0.01)
-#     X_train = train_X[:, 1, :] - train_X[:, 0, :]
-#     X_test = test_X[:, 1, :] - test_X[:, 0, :]
-#     y_train = train_y
-#     y_test = test_y
-#     # clf.fit(train_X, train_y)
-#     # print(clf.test(test_X))
-#     # print(test_y)
-#     saxvsm = SAXVSM(window_size=15, word_size=3, n_bins=2,
-#                     strategy='uniform')
-#     saxvsm.fit(X_train, y_train)
-#     # tfidf = bossvs.tfidf_
-#     # vocabulary_length = len(bossvs.vocabulary_)
-#     # X_new = bossvs.decision_function(X_test)
-#     # print(X_new)
-
-#     # clf = LearningShapelets(random_state=42, tol=0.01)
-#     # clf.fit(X_train, y_train)
-#     # print(clf.score(X_test,y_test))
-#     # print(clf.score(X_train,y_train))
-#     print(saxvsm.score(X_test,y_test))
-#     print(saxvsm.score(X_train,y_train))
-#     print(saxvsm.predict(X_test))
-#     print(y_test)
-    
 if __name__ == '__main__':
     folder = "./data"
     X, y = generate_data(folder)
-    train_select = np.arange(0, len(X), 2)
-    test_select = np.setdiff1d(np.arange(len(X)), train_select)
-    train_X, test_X = X[train_select], X[test_select]
-    train_y, test_y = y[train_select], y[test_select]
-    print(X.shape, y.shape)
-    print(train_X.shape, train_y.shape)
-    print(test_X.shape, test_y.shape)
-    classification_BOSSVS(train_X, train_y, test_X, test_y)
+    # y = y[:,None]
+    # X = from_3d_numpy_to_nested(X)
+    # y = from_2d_array_to_nested(y)
 
     # classifier(data)
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=5,random_state=123)
+    mask_train = [np.argwhere(y==0)[0:1].flatten(), np.argwhere(y==1)[0:7].flatten(), np.argwhere(y==2)[0:7].flatten()]
+    mask_train = np.hstack(mask_train).flatten()
+    mask_test = np.setdiff1d(np.arange(len(y)), mask_train)
+    X_train, y_train = X[mask_train], y[mask_train]
+    X_test, y_test = X[mask_test], y[mask_test]
+    
+    X_train = from_3d_numpy_to_nested(X_train)
+    X_test = from_3d_numpy_to_nested(X_test)
+ 
+    
+    from sktime.classification.shapelet_based import MrSEQLClassifier
+    clf = MrSEQLClassifier()
+    clf.fit(X_train, y_train)
+    print("MrSEQLClassifier")
+    y_pred = clf.predict(X_test)
+    print(clf.score(X_test, y_test))
+    print(y_test)
+    print(y_pred)
+
+    # clf = ColumnEnsembleClassifier(
+    #     estimators=[
+    #         ("TSF0", TimeSeriesForestClassifier(n_estimators=100), [0]),
+    #         ("BOSSEnsemble3", BOSSEnsemble(max_ensemble_size=5), [3]),
+    #     ]
+    # )
+    # clf.fit(X_train, y_train)
+    # print("ColumnEnsembleClassifier")
+    # print(clf.score(X_test, y_test))
+
+    steps = [
+        ("concatenate", ColumnConcatenator()),
+        ("classify", TimeSeriesForestClassifier(n_estimators=100)),
+    ]
+    clf = Pipeline(steps)
+    clf.fit(X_train, y_train)
+    clf.score(X_test, y_test)
+    print("Concatenate")
+    print(clf.score(X_test, y_test))
