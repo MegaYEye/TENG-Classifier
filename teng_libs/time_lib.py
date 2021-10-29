@@ -76,7 +76,7 @@ def width_filter2(x_abs, peaks, min_width):
 def get_peaks(x, height=1e-10, width=10, nms_pts=700):
     x_abs = np.abs(x)
     peaks, _ = find_peaks(x_abs, height=height,prominence=height)
-    peaks = width_filter1(x_abs,peaks, min_height=1e-10, half_width=width//2)
+    peaks = width_filter1(x_abs,peaks, min_height=height, half_width=width//2)
     peaks = width_filter2(x_abs, peaks, width)
     peaks = nms(x_abs,peaks, nms_pts)
     peaks.sort()
@@ -91,11 +91,11 @@ def segment(x, peak, left, right):
     return result
 
     
-if __name__ == '__main__':
+def test1():
     from DAC_lib import  read_DAC_data
     #! tape
-    filename = "data_DAC_structure/tape/hexagonal wrench with double side tape.data"
-    # filename = "data_DAC_structure/tape/screw head with double side tape.data"
+    # filename = "data_DAC_structure/tape/hexagonal wrench with double side tape.data"
+    filename = "data_DAC_structure/tape/screw head with double side tape.data"
     # filename = "data_DAC_structure/tape/tape edge.data"
     # filename = "data_DAC_structure/tape/tape side.data"
 
@@ -110,3 +110,53 @@ if __name__ == '__main__':
     plt.plot(np.arange(len(x)), x)
     plt.plot(peaks, x[peaks], "x")
     plt.show()
+    
+
+def get_all_peaks(x):
+    # x = data = read_CSV_data(filename, usecols=np.arange(1))
+    x = x - np.mean(x)
+    x = x/(20*1e6)
+    
+    peaks = get_peaks(x,height=1e-7, nms_pts=200, width=5)
+    return peaks
+
+def test2():
+    from DAC_lib import read_CSV_data
+    #!not usable
+    # filename = "/media/ye/1494EA6E94EA5232/programming2/TimeSeqTENG/data2/cardbox.csv"
+    #!basically okay
+    # filename = "/media/ye/1494EA6E94EA5232/programming2/TimeSeqTENG/data2/glasscup.csv" 
+    #!not usable
+    # filename = "/media/ye/1494EA6E94EA5232/programming2/TimeSeqTENG/data2/plasticbottle.csv"
+    #!not usable
+    # filename = "/media/ye/1494EA6E94EA5232/programming2/TimeSeqTENG/data2/plasticfoam.csv"
+    #!not usable
+    # filename = "/media/ye/1494EA6E94EA5232/programming2/TimeSeqTENG/data2/tape.csv"
+    #!not usable
+    # filename = "/media/ye/1494EA6E94EA5232/programming2/TimeSeqTENG/data2/tissue.csv"
+    # !not usable
+    # filename = "/media/ye/1494EA6E94EA5232/programming2/TimeSeqTENG/data2/yakelibox.csv"
+    # !fine
+    # filename = "/media/ye/1494EA6E94EA5232/programming2/TimeSeqTENG/data3/tape1.csv"
+    # !fine
+    # filename = "/media/ye/1494EA6E94EA5232/programming2/TimeSeqTENG/data3/tape2.csv"
+    # !fine
+    # filename = "/media/ye/1494EA6E94EA5232/programming2/TimeSeqTENG/data3/thorlab-bulk1.csv"
+    # !fine
+    # filename = "/media/ye/1494EA6E94EA5232/programming2/TimeSeqTENG/data3/thorlab-bulk2.csv"
+    # !fine
+    # filename = "/media/ye/1494EA6E94EA5232/programming2/TimeSeqTENG/data3/thorlab-bulk3.csv"
+    
+    x = data = read_CSV_data(filename, usecols=np.arange(1))
+    x = x - np.mean(x)
+    x = x/(20*1e6)
+    
+    peaks = get_peaks(x,height=1e-7, nms_pts=200, width=5)
+    # peaks = peaks[::2]
+    plt.plot(np.arange(len(x)), x)
+    plt.plot(peaks, x[peaks], "x")
+    plt.show()  
+
+
+if __name__ == '__main__':
+    test2()
